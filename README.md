@@ -57,7 +57,9 @@ They are announced with each puzzle ("Bewertung 11,5").
   (10.6) rate below 11.4, so they now appear under Meister.
 * **New puzzles.** The {-1+1} vicinity of the 208 ranking-list puzzles rated 11.7+ contains
   3,499 minimal T&E(2) puzzles that are in none of the collections used here.
-  @NEWFINDS@
+  826 of them were rated: 4 rate 8.0, the rest 9.0–11.1, most of them 9.9–10.6. None reached 11.4.
+  After removing puzzles whose solution grid is already used in a bank, 276 new finds
+  (9.0–11.0) are in Meister.
   Puzzles with no T&E(1) eliminations at the start rate higher on average (about 10.3 against
   about 9.8), so they were rated first. Finding new 11.4+ puzzles needs far more compute (the forum
   has mined these neighbourhoods for years) and is the obvious next step: `{-2+2}` searches and
