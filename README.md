@@ -12,8 +12,8 @@ Everything runs locally in one HTML file; no network access is needed.
 | Mittel   | –                      | generated in the browser, singles only (about 31 clues) |
 | Schwer   | 2.6 – 4.4              | pre-generated and rated bank |
 | Experte  | 4.5 – 8.9              | pre-generated and rated bank |
-| Meister  | 9.0 – 11.3             | forum ranking list of the hardest sudokus (ph2010), named classics |
-| Extrem   | 11.4 – 11.9            | forum ranking list, named classics, new finds from the vicinity search |
+| Meister  | 9.0 – 11.3             | forum ranking list of the hardest sudokus (ph2010), named classics below 11.4, new finds |
+| Extrem   | 11.5 – 11.9            | the 1,000 hardest distinct solution grids from the ranking list, plus the named classics |
 
 From Schwer upwards the page draws from embedded banks, so there is no waiting on the client.
 Every puzzle in a level comes up once before any repeats (a seeded shuffle; only the seed and
@@ -45,6 +45,25 @@ They are announced with each puzzle ("Bewertung 11,5").
 * **Verification:** before writing, every puzzle is checked again for a unique solution and
   minimality. `scripts/test_page.js` then draws puzzles from every level in a headless browser
   and checks them against the banks.
+
+## Findings
+
+* **Ratings are consistent.** Re-rating 8 random ranking-list puzzles (10.4–11.8) with our
+  SukakuExplainer build gave the published value 6 times and +0.1 twice.
+* **Duplicate classic.** "eleven #1" and "eleven #3" on the original page were the same puzzle
+  (checked with an exact isomorphism test over all 3.4 million transformations). There are 16
+  distinct classics. AI Escargot (10.5), Platinum Blonde (10.6) and Arto Inkala's 2012 puzzle
+  (10.6) rate below 11.4, so they now appear under Meister.
+* **New puzzles.** The {-1+1} vicinity of the 208 ranking-list puzzles rated 11.7+ contains
+  3,499 minimal T&E(2) puzzles that are in none of the collections used here.
+  @NEWFINDS@
+  Puzzles with no T&E(1) eliminations at the start rate higher on average (about 10.3 against
+  about 9.8), so they were rated first. Finding new 11.4+ puzzles needs far more compute (the forum
+  has mined these neighbourhoods for years) and is the obvious next step: `{-2+2}` searches and
+  rating many more candidates.
+* **Random puzzles.** Among 200,000 random minimal puzzles none had T&E depth 2. About 2.6%
+  rate 8.0 or more and about 0.14% reach 9.0 (estimated from 12,000 rated). That is why Meister
+  and Extrem come mostly from the forum lists.
 
 ## Reproducing
 
