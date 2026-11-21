@@ -4,6 +4,11 @@ An accessible sudoku page (`index.html`, German) for a blind solver: it picks a 
 reads the givens aloud block by block, so the puzzle can be set up on a physical board.
 Everything runs locally in one HTML file; no network access is needed.
 
+* **[HANDOVER.md](HANDOVER.md):** for whoever maintains the live page. Covers the puzzle file,
+  the changes compared with the original page, and how to bring them in.
+* **[RATINGS.md](RATINGS.md):** what the ratings mean.
+* **`data/puzzles.csv`:** all 3,100 embedded puzzles with solution, rating, source and name.
+
 ## Levels
 
 | Level    | Sudoku Explainer rating | Source |
@@ -21,7 +26,8 @@ position are kept in `localStorage`). Each puzzle is also randomly relabelled, p
 possibly transposed before it is read, which keeps the difficulty identical.
 
 The ratings are Sudoku Explainer (SE) ratings: the difficulty of the hardest single step needed.
-They are announced with each puzzle ("Bewertung 11,5").
+They are announced with each puzzle ("Bewertung 11,5"). See [RATINGS.md](RATINGS.md) for how they
+are computed and why 9.0 to 11.9 is a far bigger step than 2.6 to 4.4.
 
 ## How the banks are built
 
@@ -44,8 +50,9 @@ They are announced with each puzzle ("Bewertung 11,5").
   the banks share a solution grid (the named classics excepted), because near-twins from vicinity
   searches would feel the same. New finds make up at most 40% of a bank.
 * **Verification:** before writing, every puzzle is checked again for a unique solution and
-  minimality. `scripts/test_page.js` then draws puzzles from every level in a headless browser
-  and checks them against the banks.
+  minimality. `scripts/check_puzzles.mjs` re-checks `data/puzzles.csv` and the page
+  independently (plain Node, its own solver). `scripts/test_page.js` draws puzzles from every
+  level in a headless browser and checks them against the banks.
 
 ## Findings
 
@@ -82,10 +89,12 @@ $T pfp < all_known.txt | sort -u > known.fp
 $T vicinity 1 known.fp < seeds.txt > candidates.txt     # puzzle depth te1-elims seed#
 python3 scripts/build_banks.py --ph2010 Sudoku-classif/ph2010-3103972-TE2/PUZZLES \
      --rated generated.rated:G --rated new.rated:N --rated classics.rated:C
+node scripts/check_puzzles.mjs data/puzzles.csv index.html
 node scripts/test_page.js
 ```
 
-`data/*.tsv` lists every embedded puzzle with its rating and source.
+`build_banks.py` writes `data/puzzles.csv` and the BANK block in `index.html`. After editing the
+CSV by hand, `node scripts/csv_to_page.mjs` rewrites the BANK block from it.
 
 ## Sources and credits
 

@@ -12,6 +12,9 @@ const N = +(process.argv[2] || 25);
 const tool = (args, lines) => execFileSync(TOOL, args, { input: lines.join('\n') + '\n' }).toString().trim().split('\n').map(l => l.split(' '));
 const toStr = a => a.map(v => (v ? String(v) : '.')).join('');
 
+// data/puzzles.csv: level,puzzle,solution,... (the first two columns never need quoting)
+const csvRows = fs.readFileSync(path.join(ROOT, 'data/puzzles.csv'), 'utf8').trim().split('\n').slice(1).map(l => l.split(','));
+
 let failures = 0;
 const fail = msg => { failures++; console.log('FAIL ' + msg); };
 
@@ -43,7 +46,7 @@ const fail = msg => { failures++; console.log('FAIL ' + msg); };
   }
 
   for (const level of ['schwer', 'experte', 'meister', 'extrem']) {
-    const bank = fs.readFileSync(path.join(ROOT, `data/${level}.tsv`), 'utf8').split('\n').filter(l => l && !l.startsWith('#')).map(l => l.split('\t')[0]);
+    const bank = csvRows.filter(r => r[0] === level).map(r => r[1]);
     const bankFp = new Set(tool(['pfp'], bank).map(r => r[0]));
     const got = [];
     for (let i = 0; i < N; i++) {
