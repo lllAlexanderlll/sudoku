@@ -40,8 +40,9 @@ They are announced with each puzzle ("Bewertung 11,5").
   that makes the solution unique again (by counting over all solutions of the reduced puzzle),
   minimise, keep T&E depth 2, and drop anything already known. Candidates are rated afterwards.
 * **Novelty and diversity:** isomorphism-invariant fingerprints of puzzles and of solution grids.
-  New finds are checked against about 3.4 million known hard puzzles. Each bank keeps only one
-  puzzle per solution grid, because near-twins from vicinity searches would feel the same.
+  New finds are checked against about 3.4 million known hard puzzles. No two puzzles in any of
+  the banks share a solution grid (the named classics excepted), because near-twins from vicinity
+  searches would feel the same. New finds make up at most 40% of a bank.
 * **Verification:** before writing, every puzzle is checked again for a unique solution and
   minimality. `scripts/test_page.js` then draws puzzles from every level in a headless browser
   and checks them against the banks.

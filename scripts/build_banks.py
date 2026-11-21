@@ -27,6 +27,27 @@ LEVELS = {
 }
 
 
+NEW_SHARE = 0.4  # at most this share of a spread bank comes from new vicinity finds
+
+
+def round_robin(items, n, rng):
+    """Picks up to n items, cycling over the distinct rating values so that every difficulty
+    is equally represented; sparse values give their share to the others."""
+    by_value = defaultdict(list)
+    for it in items:
+        by_value[it['er']].append(it)
+    groups = [by_value[v] for v in sorted(by_value)]
+    for g in groups:
+        rng.shuffle(g)
+    out, i = [], 0
+    while len(out) < n and any(groups):
+        g = groups[i % len(groups)]
+        if g:
+            out.append(g.pop())
+        i += 1
+    return out
+
+
 def tool(args, lines):
     out = subprocess.run([ARGS.tool] + args, input='\n'.join(lines) + '\n', capture_output=True, text=True, check=True).stdout
     return [l.split() for l in out.splitlines()]
@@ -127,39 +148,36 @@ def main():
 
     prio = {'F': 0, 'N': 1, 'R': 2, 'G': 3}
     banks = {}
-    for k, (lo, hi, size, spread) in LEVELS.items():
+    seen_g = set()  # solution grids already used, across banks: no near-twins between levels
+    for k in reversed(list(LEVELS)):  # hardest first, so the hard banks get first pick of grids
+        lo, hi, size, spread = LEVELS[k]
         pool = pools[k]
         rng.shuffle(pool)
         # classics first, then new finds, then hardest; drop duplicates by puzzle and by solution grid
         pool.sort(key=lambda it: (prio[it['src']], -it['er']))
-        seen_p, seen_g, uniq = set(), set(), []
+        seen_p, local_g, uniq = set(), set(), []
         for it in pool:
-            if it['pfp'] in seen_p or (it['gfp'] in seen_g and it['src'] != 'F'):  # classics are always kept
+            dup_grid = it['gfp'] in local_g or it['gfp'] in seen_g
+            if it['pfp'] in seen_p or (dup_grid and it['src'] != 'F'):  # classics are always kept
                 continue
-            seen_p.add(it['pfp']); seen_g.add(it['gfp'])
+            seen_p.add(it['pfp']); local_g.add(it['gfp'])
             uniq.append(it)
         if not spread:
             chosen = uniq[:size]
         else:
-            forced = [it for it in uniq if it['src'] in 'FN']
-            rest = [it for it in uniq if it['src'] not in 'FN']
-            by_value = defaultdict(list)
-            for it in rest:
-                by_value[it['er']].append(it)
-            groups = [by_value[v] for v in sorted(by_value)]
-            for g in groups:
-                rng.shuffle(g)
-            chosen, left = list(forced), size - len(forced)
-            # round-robin over rating values; sparse values give their share to the others
-            i = 0
-            while left > 0 and any(groups):
-                g = groups[i % len(groups)]
-                if g:
-                    chosen.append(g.pop()); left -= 1
-                i += 1
+            chosen = [it for it in uniq if it['src'] == 'F']
+            # new finds take at most NEW_SHARE of the bank, then the rest is filled up
+            new = [it for it in uniq if it['src'] == 'N']
+            chosen += round_robin(new, int(size * NEW_SHARE) - len(chosen), rng)
+            taken = {id(it) for it in chosen}
+            rest = [it for it in uniq if id(it) not in taken and it['src'] != 'N']
+            chosen += round_robin(rest, size - len(chosen), rng)
+        for it in chosen:
+            seen_g.add(it['gfp'])
         banks[k] = chosen
         print(f'{k}: pool {len(pool)}, unique grids {len(uniq)}, chosen {len(chosen)}', file=sys.stderr)
 
+    banks = {k: banks[k] for k in LEVELS}
     # verify: unique solution and minimal
     allp = [it['p'] for k in banks for it in banks[k]]
     bad = [r[0] for r in tool(['check'], allp) if r[1] != '1' or r[2] != '1']
