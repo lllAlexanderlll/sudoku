@@ -4,7 +4,7 @@ An accessible sudoku page (`index.html`, German) for a blind solver: it picks a 
 reads the givens aloud block by block, so the puzzle can be set up on a physical board.
 Everything runs locally in one HTML file; no network access is needed.
 
-* **[HANDOVER.md](HANDOVER.md):** for whoever maintains the live page. Covers the puzzle file,
+* **[HANDOVER.md](HANDOVER.md) (German):** for whoever maintains the live page. Covers the puzzle file,
   the changes compared with the original page, and how to bring them in.
 * **[RATINGS.md](RATINGS.md):** what the ratings mean.
 * **`data/puzzles.csv`:** all 3,100 embedded puzzles with solution, rating, source and name.

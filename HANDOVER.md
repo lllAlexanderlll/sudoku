@@ -1,108 +1,130 @@
-# Handover: new puzzles for the Sudoku page
+# Übergabe: neue Rätsel für die Sudoku-Seite
 
-For Simon, who maintains the website. This covers what changed, which files to use, and how
-to bring the changes into the live page.
+Für Simon, der die Website betreut. Hier steht, was sich geändert hat, welche Dateien du brauchst
+und wie du die Änderungen in die Live-Seite übernimmst.
 
-## In short
+## Kurz gesagt
 
-* `data/puzzles.csv`: **3,100 rated puzzles with solutions.** Schwer 500, Experte 800, the new
-  level Meister 800, Extrem 1,000. Every puzzle was checked: exactly one solution, and no clue
-  can be removed.
-* `index.html`: the original page with all changes already made and the puzzles embedded.
-* `scripts/check_puzzles.mjs` and `scripts/csv_to_page.mjs`: plain Node 18+, nothing to install.
-* `RATINGS.md`: what the ratings mean, and why 9.0 vs 11.9 is a huge step while 2.6 vs 4.4 is not.
+* `data/puzzles.csv`: **3.100 bewertete Rätsel mit Lösung.** Schwer 500, Experte 800, die neue
+  Stufe Meister 800, Extrem 1.000. Jedes Rätsel ist geprüft: genau eine Lösung, und keine
+  Vorgabe lässt sich weglassen.
+* `index.html`: die ursprüngliche Seite mit allen Änderungen und den eingebetteten Rätseln.
+* `scripts/check_puzzles.mjs` und `scripts/csv_to_page.mjs`: reines Node ab Version 18, ohne
+  Installation.
+* `RATINGS.md` (Englisch): was die Bewertungen bedeuten und warum 9,0 gegenüber 11,9 ein riesiger
+  Schritt ist, 2,6 gegenüber 4,4 aber nicht.
 
-## The puzzle file
+## Die Rätseldatei
 
-`data/puzzles.csv` (UTF-8, comma-separated, quoted where needed):
+`data/puzzles.csv` (UTF-8, durch Kommas getrennt, wo nötig in Anführungszeichen):
 
-| Column | Example | Meaning |
-|--------|---------|---------|
+| Spalte | Beispiel | Bedeutung |
+|--------|----------|-----------|
 | level | `extrem` | `schwer`, `experte`, `meister`, `extrem` |
-| puzzle | `98.7.....7.....6...` | 81 characters, row by row, `.` = empty |
-| solution | `987654321246...` | 81 digits |
-| rating | `11.9` | Sudoku Explainer rating, one decimal |
-| source | `classic` | `classic` named famous puzzle, `new` found in this project, `ranking-list` forum list of the hardest sudokus, `generated` generated here |
-| name | `„Champagne Dry“` | classics: German phrase as used in "Es beruht auf …"; ranking list: the forum's ID (not shown on the page); otherwise empty |
+| puzzle | `98.7.....7.....6...` | 81 Zeichen, Zeile für Zeile, `.` = leer |
+| solution | `987654321246...` | 81 Ziffern |
+| rating | `11.9` | Sudoku-Explainer-Bewertung, eine Nachkommastelle, mit Punkt |
+| source | `classic` | `classic` bekanntes Rätsel mit Namen, `new` in diesem Projekt neu gefunden, `ranking-list` Forums-Rangliste der schwersten Sudokus, `generated` hier erzeugt |
+| name | `„Champagne Dry“` | bei Klassikern die Wendung, wie sie in „Es beruht auf …“ steht; bei der Rangliste die Kennung aus dem Forum (wird auf der Seite nicht angezeigt); sonst leer |
 
-Rating ranges per level: Schwer 2.6–4.4, Experte 4.5–8.9, Meister 9.0–11.3, Extrem 11.5–11.9.
+Bewertungsbereiche je Stufe: Schwer 2,6–4,4, Experte 4,5–8,9, Meister 9,0–11,3, Extrem 11,5–11,9.
 
-## Bringing it into the live page
+## Übernahme in die Live-Seite
 
-**Option A, if the live page is still the version Alexander sent (the first commit of this
-repository, `69ba738`):** replace it with `index.html`. To check, compare the live file with
-`git show 69ba738:index.html`; if they are identical, this is the whole job.
+Das Repository ist öffentlich: https://github.com/lllAlexanderlll/sudoku
 
-**Option B, if the live page has changed since:** port the changes listed below. The prompt at
-the end of this file is written so that Claude can do it.
+**Variante A: Die Live-Seite ist noch die Fassung, die Alexander mir gegeben hat.** Das ist der
+erste Commit dieses Repositorys, `69ba738`. Dann ersetzt du sie durch `index.html`. Zum Prüfen
+vergleichst du die Live-Datei mit `git show 69ba738:index.html`. Sind beide gleich, bist du
+damit fertig.
 
-## Changes compared with the original page
+**Variante B: Die Live-Seite hat sich seitdem geändert.** Dann überträgst du die Änderungen aus
+der Liste unten. Der Prompt am Ende dieser Datei ist so geschrieben, dass Claude das erledigen
+kann.
 
-All changes are in the `<script>` part, except the level list in the HTML.
+## Änderungen gegenüber der ursprünglichen Seite
 
-1. **Puzzles come from embedded banks instead of being generated in the browser (Schwer to
-   Extrem).** The block between `// BANK-START` and `// BANK-END` holds `NAMED` (names of the
-   classics) and `BANK` (one string per level, one line per puzzle: 81 characters, a 3-digit
-   rating such as `115` for 11.5, a 1-letter source `F`/`N`/`R`/`G`). It replaces the
-   `FAMOUS` list.
-   *Why:* the old Schwer and Experte puzzles took up to 12 seconds to generate. Their difficulty
-   was only "not solvable with simple steps", which can mean anything from 2.6 to 11. Now
-   every puzzle is rated and appears instantly.
-2. **New level "Meister" (9.0–11.3)** between Experte and Extrem: a new radio button and an
-   entry in `LEVELS`. The old Extrem (17 classics) mixed 10.5 with 11.9.
-3. **No repeats per level:** `nextFromBank(level)` replaces `nextFamous()`. It stores only a
-   random seed and a position in `localStorage` under `sudoku-ansage-stapel-v2-<level>`, and
-   rebuilds the shuffled order from the seed. The old key `sudoku-ansage-extrem-stapel-v1` is
-   no longer used and can be left alone. The saved game (`sudoku-ansage-game-v2`) and the
-   settings are unchanged.
-4. **The rating is announced:** the "Es beruht auf …" text now says where the puzzle comes from
-   and ends with "(Bewertung 11,5)".
-5. **Level descriptions** show the rating range and the number of puzzles, filled in from the
-   bank at start (`data-range`, `data-bank`). They are no longer hard-coded.
-6. **"Bitte warten" only for Leicht and Mittel**, the levels that are still generated in the
-   browser.
-7. **Removed code:** `eliminate()` and the multi-level `logicSolve()`, which only the old
-   Schwer/Experte generation used. `logicSolve()` now checks singles only, for Leicht/Mittel.
-8. **Duplicate removed:** "eleven #1" and "eleven #3" were the same puzzle (checked with an
-   exact isomorphism test). There are 16 classics. Three of them (AI Escargot, Platinum Blonde,
-   Arto Inkala 2012) rate 10.5–10.6 and are now under Meister.
+Bis auf die Liste der Stufen im HTML liegt alles im `<script>`-Teil.
 
-The page grows from 95 KB to 352 KB. That is fine to load, also on a phone.
+1. **Ab Schwer kommen die Rätsel aus eingebetteten Listen, statt im Browser erzeugt zu
+   werden.** Der Block zwischen `// BANK-START` und `// BANK-END` ersetzt die Liste `FAMOUS`.
+   Er enthält zwei Dinge:
+   * `NAMED`: die Namen der Klassiker.
+   * `BANK`: je Stufe ein String mit einer Zeile pro Rätsel. Eine Zeile besteht aus 81 Zeichen
+     Rätsel, drei Ziffern Bewertung (`115` steht für 11,5) und einem Buchstaben für die Herkunft
+     (`F`, `N`, `R` oder `G`).
 
-## Recommendations
+   *Warum:* Die alten Rätsel für Schwer und Experte brauchten bis zu 12 Sekunden zum Erzeugen.
+   Ihre Schwierigkeit war nur „mit einfachen Schritten nicht lösbar“, und das kann alles
+   zwischen 2,6 und 11 sein. Jetzt ist jedes Rätsel bewertet und sofort da.
+2. **Neue Stufe „Meister“ (9,0–11,3)** zwischen Experte und Extrem: ein neuer Radio-Button und
+   ein Eintrag in `LEVELS`. Das alte Extrem mit 17 Klassikern mischte 10,5 und 11,9.
+3. **Keine Wiederholungen je Stufe:** `nextFromBank(level)` ersetzt `nextFamous()`. Die Funktion
+   speichert in `localStorage` unter `sudoku-ansage-stapel-v2-<stufe>` nur einen Zufallsstartwert
+   und eine Position. Die gemischte Reihenfolge baut sie daraus jedes Mal neu auf.
+   * Der alte Schlüssel `sudoku-ansage-extrem-stapel-v1` wird nicht mehr benutzt und kann
+     bleiben.
+   * Der gespeicherte Spielstand (`sudoku-ansage-game-v2`) und die Einstellungen sind
+     unverändert.
+4. **Die Bewertung wird angesagt:** Der Text „Es beruht auf …“ nennt jetzt die Herkunft des
+   Rätsels und endet mit „(Bewertung 11,5)“.
+5. **Die Beschreibungen der Stufen** zeigen den Bewertungsbereich und die Anzahl der Rätsel. Beim
+   Start werden sie aus der Liste befüllt (`data-range`, `data-bank`), statt fest im Text zu
+   stehen.
+6. **„Bitte warten“ nur noch bei Leicht und Mittel**, den beiden Stufen, die weiterhin im Browser
+   erzeugt werden.
+7. **Entfernter Code:** `eliminate()` und das mehrstufige `logicSolve()`. Beides brauchte nur die
+   alte Erzeugung von Schwer und Experte. `logicSolve()` prüft jetzt nur noch Singles, für Leicht
+   und Mittel.
+8. **Doppeltes Rätsel entfernt:** „eleven #1“ und „eleven #3“ waren dasselbe Rätsel. Das hat ein
+   exakter Isomorphie-Test über alle Umstellungen bestätigt. Es gibt also 16 Klassiker. Drei
+   davon sind mit 10,5–10,6 bewertet und stehen jetzt unter Meister: AI Escargot, Platinum Blonde
+   und Arto Inkalas Rätsel von 2012.
 
-**Keep the shuffling.** There are two kinds, and both were already in the original page:
+Die Seite wächst von 95 KB auf 352 KB. Das lädt problemlos, auch auf dem Handy.
 
-* *Shuffled order without repeats* (change 3): keep it, or Alexander's mother would get
-  repeats or always the same order.
-* *Transforming each puzzle before reading it* (`transform()`: relabel digits, swap rows,
-  columns and bands, maybe mirror). The original did this for Extrem; now it applies to all bank
-  levels. Keep it. It costs nothing, it leaves the difficulty unchanged, and it means a famous
-  puzzle cannot be recognised from its givens. The page then works out the solution of the
-  transformed puzzle with `solve()`, which takes under 50 ms even for the hardest puzzles
-  (measured on all Meister and Extrem puzzles). Dropping it would save only about 15 lines.
+## Empfehlungen
 
-**Embed the puzzles; don't load the CSV with `fetch()`.** Embedding keeps the page a single file
-that also works offline and when opened directly from disk (`file://`), where `fetch()` fails.
-Use the CSV as the source and regenerate the embedded block from it (see below).
+**Das Mischen beibehalten.** Es gibt zwei Arten, und beide waren schon in der ursprünglichen
+Seite:
 
-**No verification in the page.** Every puzzle was verified when the banks were built, and the
-page computes the solution itself anyway. But **run the check whenever the puzzle data or the
-code that embeds it changes.** One wrong character makes a puzzle unsolvable or ambiguous, and
-she would only notice after a long solve:
+* *Gemischte Reihenfolge ohne Wiederholung* (Änderung 3): beibehalten. Sonst bekäme Alexanders
+  Mutter Wiederholungen oder immer dieselbe Reihenfolge.
+* *Jedes Rätsel vor dem Vorlesen umstellen* (`transform()`: Ziffern tauschen, Zeilen, Spalten
+  und Bänder tauschen, eventuell spiegeln). Das Original machte das für Extrem, jetzt gilt es für
+  alle Stufen ab Schwer.
+  * Die Schwierigkeit bleibt dabei gleich.
+  * Ein bekanntes Rätsel lässt sich so nicht an seinen Vorgaben wiedererkennen.
+  * Es kostet nichts. Die Lösung des umgestellten Rätsels berechnet die Seite danach mit
+    `solve()`, das dauert selbst bei den schwersten Rätseln unter 50 ms (gemessen an allen
+    Rätseln von Meister und Extrem).
+  * Weglassen würde nur etwa 15 Zeilen sparen.
+
+**Die Rätsel einbetten, die CSV nicht per `fetch()` laden.** So bleibt die Seite eine einzige
+Datei. Sie funktioniert dann auch offline und wenn man sie direkt von der Festplatte öffnet
+(`file://`); dort schlägt `fetch()` fehl. Die CSV ist die Quelle, den eingebetteten Block
+erzeugst du daraus neu (siehe unten).
+
+**Keine Prüfung in der Seite.** Jedes Rätsel wurde beim Zusammenstellen der Listen geprüft, und
+die Seite berechnet die Lösung ohnehin selbst. **Lass die Prüfung aber laufen, sobald sich die
+Rätseldaten oder der Code zum Einbetten ändern.** Ein einziges falsches Zeichen macht ein Rätsel
+unlösbar oder mehrdeutig, und das merkt sie erst nach langem Rätseln:
 
 ```bash
 node scripts/check_puzzles.mjs data/puzzles.csv index.html
 ```
 
-It checks every puzzle in the CSV (one solution, matches the solution column, minimal, rating
-fits the level, no duplicates) and that the page holds exactly the CSV's puzzles with the same
-levels and ratings. It takes about 2 minutes and ends with `ALL OK`. If the live page embeds
-the puzzles differently, ask Claude to adapt the page part of the script.
+Das Skript prüft zwei Dinge:
+* Jedes Rätsel der CSV hat genau eine Lösung, passt zur Spalte `solution` und ist minimal. Die
+  Bewertung passt zur Stufe, und kein Rätsel kommt doppelt vor.
+* Die Seite enthält genau die Rätsel der CSV, mit denselben Stufen und Bewertungen.
 
-## Changing the puzzles later
+Es dauert etwa 2 Minuten und endet mit `ALL OK`. Bettet die Live-Seite die Rätsel anders ein,
+lass Claude den Seitenteil des Skripts anpassen.
 
-* **Remove or move puzzles:** edit `data/puzzles.csv`, then:
+## Rätsel später ändern
+
+* **Rätsel entfernen oder verschieben:** Bearbeite `data/puzzles.csv`, dann:
 
 ```bash
 node scripts/csv_to_page.mjs data/puzzles.csv index.html
@@ -112,17 +134,23 @@ node scripts/csv_to_page.mjs data/puzzles.csv index.html
 node scripts/check_puzzles.mjs data/puzzles.csv index.html
 ```
 
-* **Add puzzles:** they need a Sudoku Explainer rating. See `README.md`, "Reproducing", for
-  how the banks were built and rated.
+* **Rätsel hinzufügen:** Neue Rätsel brauchen eine Bewertung mit Sudoku Explainer. Wie die
+  Listen erzeugt und bewertet wurden, steht in `README.md` unter „Reproducing“ (Englisch).
 
-## Prompt for Claude (Option B)
+## Prompt für Claude (Variante B)
 
-> In this repository is our accessible sudoku page. I want to bring in the new puzzle banks from
-> https://github.com/lllAlexanderlll/sudoku. Read its HANDOVER.md, compare its first commit's
-> `index.html` (the version we had) with its current `index.html`, and apply the same changes
-> to our page: the BANK block, `nextFromBank`, the Meister level, the rating in the "Es beruht
-> auf" text, the level descriptions, the "Bitte warten" change, and the removed code. Keep
-> everything else we changed since then. Keep `transform()` and the no-repeat order. Generate the
-> BANK block with `node scripts/csv_to_page.mjs data/puzzles.csv <our page>`, not by hand. Then
-> run `node scripts/check_puzzles.mjs data/puzzles.csv <our page>`. Open the page and check that
-> all six levels start a puzzle without errors in the console.
+> In diesem Repository liegt unsere barrierefreie Sudoku-Seite. Ich möchte die neuen Rätsellisten
+> aus https://github.com/lllAlexanderlll/sudoku übernehmen.
+>
+> 1. Lies dort HANDOVER.md.
+> 2. Vergleiche die `index.html` aus dem ersten Commit (unsere alte Fassung) mit der aktuellen
+>    `index.html`.
+> 3. Übertrage dieselben Änderungen auf unsere Seite: den BANK-Block, `nextFromBank`, die Stufe
+>    Meister, die Bewertung im Text „Es beruht auf …“, die Beschreibungen der Stufen, die Änderung
+>    bei „Bitte warten“ und den entfernten Code. Alles andere, was wir seitdem geändert haben,
+>    bleibt erhalten. `transform()` und die Reihenfolge ohne Wiederholung bleiben ebenfalls.
+> 4. Erzeuge den BANK-Block mit `node scripts/csv_to_page.mjs data/puzzles.csv <unsere Seite>`,
+>    nicht von Hand.
+> 5. Führe danach `node scripts/check_puzzles.mjs data/puzzles.csv <unsere Seite>` aus.
+> 6. Öffne die Seite und prüfe, dass alle sechs Stufen ohne Fehler in der Konsole ein Rätsel
+>    starten.
