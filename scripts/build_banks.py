@@ -17,12 +17,13 @@ from collections import defaultdict
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# level: (min ER, max ER, bank size, rating buckets for an even spread)
+# level: (min ER, max ER, bank size, spread). spread=True: round-robin over the distinct rating
+# values so that every difficulty within the level is equally represented; False: hardest first.
 LEVELS = {
-    'schwer':  (2.6, 4.4, 500, [(2.6, 2.9), (3.0, 3.3), (3.4, 3.7), (3.8, 4.1), (4.2, 4.4)]),
-    'experte': (4.5, 8.9, 800, [(4.5, 5.9), (6.0, 6.9), (7.0, 7.4), (7.5, 7.9), (8.0, 8.9)]),
-    'meister': (9.0, 11.3, 800, [(9.0, 10.4), (10.5, 10.6), (10.7, 10.8), (10.9, 11.0), (11.1, 11.2), (11.3, 11.3)]),
-    'extrem':  (11.4, 11.9, 1000, None),  # Extrem keeps everything, hardest first
+    'schwer':  (2.6, 4.4, 500, True),
+    'experte': (4.5, 8.9, 800, True),
+    'meister': (9.0, 11.3, 800, True),
+    'extrem':  (11.4, 11.9, 1000, False),
 }
 
 
@@ -87,6 +88,19 @@ def main():
     fps = tool(['fp'], [it['p'] for it in cand])
     for it, row in zip(cand, fps):
         it['pfp'], it['gfp'] = row[1], row[2]
+    # drop anything without a unique solution or not minimal (the lists contain a few)
+    ok = {r[0] for r in tool(['check'], [it['p'] for it in cand]) if r[1] == '1' and r[2] == '1'}
+    for k in LEVELS:
+        before = len(pools[k])
+        pools[k] = [it for it in pools[k] if it['p'] in ok]
+        if len(pools[k]) < before:
+            print(f'{k}: dropped {before - len(pools[k])} non-unique or non-minimal puzzles', file=sys.stderr)
+    # the hardest levels must need two nested levels of trial and error (T&E depth 2)
+    for k in ('meister', 'extrem'):
+        depth = {r[0]: r[1] for r in tool(['ted', '2'], [it['p'] for it in pools[k]])}
+        before = len(pools[k])
+        pools[k] = [it for it in pools[k] if depth[it['p']] == '2' or it['src'] == 'G']
+        print(f'{k}: {before - len(pools[k])} dropped for T&E depth != 2', file=sys.stderr)
 
     # find the classics' ratings among all ph2010 entries if not already in play
     want = {r[1] for r in fam_rows}
@@ -113,27 +127,30 @@ def main():
 
     prio = {'F': 0, 'N': 1, 'R': 2, 'G': 3}
     banks = {}
-    for k, (lo, hi, size, buckets) in LEVELS.items():
+    for k, (lo, hi, size, spread) in LEVELS.items():
         pool = pools[k]
         rng.shuffle(pool)
         # classics first, then new finds, then hardest; drop duplicates by puzzle and by solution grid
         pool.sort(key=lambda it: (prio[it['src']], -it['er']))
         seen_p, seen_g, uniq = set(), set(), []
         for it in pool:
-            if it['pfp'] in seen_p or it['gfp'] in seen_g:
+            if it['pfp'] in seen_p or (it['gfp'] in seen_g and it['src'] != 'F'):  # classics are always kept
                 continue
             seen_p.add(it['pfp']); seen_g.add(it['gfp'])
             uniq.append(it)
-        if buckets is None:
+        if not spread:
             chosen = uniq[:size]
         else:
             forced = [it for it in uniq if it['src'] in 'FN']
             rest = [it for it in uniq if it['src'] not in 'FN']
-            groups = [[it for it in rest if b0 - 1e-9 <= it['er'] <= b1 + 1e-9] for b0, b1 in buckets]
+            by_value = defaultdict(list)
+            for it in rest:
+                by_value[it['er']].append(it)
+            groups = [by_value[v] for v in sorted(by_value)]
             for g in groups:
                 rng.shuffle(g)
             chosen, left = list(forced), size - len(forced)
-            # round-robin over buckets so that sparse buckets give their share to others
+            # round-robin over rating values; sparse values give their share to the others
             i = 0
             while left > 0 and any(groups):
                 g = groups[i % len(groups)]

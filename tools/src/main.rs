@@ -9,6 +9,7 @@
 //!   tier               puzzle  basic-logic tier (1 singles, 2 locked, 3 pairs/X-Wing, 4 wings/Swordfish, 9 harder)
 //!   fp                 puzzle  puzzle-fingerprint  solution-grid-fingerprint (hex)
 //!   pfp                puzzle-fingerprint only (fast, for building the known-puzzle set)
+//!   iso                exact isomorphism test of consecutive line pairs
 //!   gen N SEED         generate N random minimal puzzles: puzzle clues tier
 //!   vicinity K [known] for each seed, all minimal puzzles in its {-K+K} neighbourhood with
 //!                      T&E depth >= 2 that are not in the fingerprint file `known`:
@@ -115,6 +116,47 @@ fn vicinity(p: &Puzzle, k: usize, rng: &mut Rng) -> Vec<Puzzle> {
     out
 }
 
+fn perms3() -> [[usize; 3]; 6] { [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]] }
+
+/// True if b is a transformation of a (digits, rows within bands, bands, columns, stacks, transpose).
+fn isomorphic(a: &Puzzle, b: &Puzzle) -> bool {
+    if clues(a) != clues(b) { return false; }
+    let orders = || {
+        let mut v = Vec::new();
+        for bands in perms3() { for r0 in perms3() { for r1 in perms3() { for r2 in perms3() {
+            let rs = [r0, r1, r2];
+            let mut o = [0usize; 9];
+            for (k, &bd) in bands.iter().enumerate() { for j in 0..3 { o[k * 3 + j] = bd * 3 + rs[k][j]; } }
+            v.push(o);
+        } } } }
+        v
+    };
+    let ords = orders();
+    for tr in [false, true] {
+        let src = if tr { let mut t = [0u8; 81]; for r in 0..9 { for c in 0..9 { t[c * 9 + r] = a[r * 9 + c]; } } t } else { *a };
+        for rows in &ords {
+            // quick reject: clue counts per row must match
+            if (0..9).any(|r| (0..9).filter(|&c| src[rows[r] * 9 + c] != 0).count() != (0..9).filter(|&c| b[r * 9 + c] != 0).count()) { continue; }
+            'cols: for cols in &ords {
+                let mut map = [0u8; 10];
+                let mut used = [0u8; 10];
+                for r in 0..9 {
+                    for c in 0..9 {
+                        let (x, y) = (src[rows[r] * 9 + cols[c]], b[r * 9 + c]);
+                        if (x == 0) != (y == 0) { continue 'cols; }
+                        if x != 0 {
+                            if map[x as usize] == 0 && used[y as usize] == 0 { map[x as usize] = y; used[y as usize] = x; }
+                            if map[x as usize] != y { continue 'cols; }
+                        }
+                    }
+                }
+                return true;
+            }
+        }
+    }
+    false
+}
+
 fn main() {
     let mut args: Vec<String> = std::env::args().skip(1).collect();
     let mut threads = std::thread::available_parallelism().map(|n| n.get()).unwrap_or(1);
@@ -186,6 +228,14 @@ fn main() {
             }
             println!("puzzles {} invariance-failures {} distinct-puzzle-fps {} distinct-grid-fps {}", lines.len(), bad, fps.len(), gfps.len());
         }
+        "iso" => {
+            // exact isomorphism test of consecutive line pairs, by trying all 3,359,232 cell transformations
+            let lines = read_lines();
+            for pair in lines.chunks(2) {
+                let (a, b) = (puzzle_of(&pair[0]).unwrap(), puzzle_of(&pair[1]).unwrap());
+                println!("{} {} {}", fmt(&a), fmt(&b), if isomorphic(&a, &b) { "isomorphic" } else { "different" });
+            }
+        }
         "gen" => {
             let n: usize = args[1].parse().unwrap();
             let seed: u64 = args[2].parse().unwrap();
@@ -220,7 +270,7 @@ fn main() {
             }));
         }
         _ => {
-            eprintln!("usage: sudoku-tools [-t N] check|ted [max]|tier|fp|gen N SEED|vicinity K [knownfp]");
+            eprintln!("usage: sudoku-tools [-t N] check|ted [max]|tier|fp|pfp|iso|selftest|gen N SEED|vicinity K [knownfp]");
             std::process::exit(2);
         }
     }
